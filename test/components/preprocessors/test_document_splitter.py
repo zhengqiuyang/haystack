@@ -928,6 +928,23 @@ class TestSplittingNLTKSentenceSplitter:
         assert documents[2].meta["split_id"] == 2
         assert documents[2].meta["split_idx_start"] == text.index(documents[2].content)
 
+    def test_sentence_overlap_does_not_exceed_split_length(self) -> None:
+        # Regression for #13740: carrying "Go." into the next chunk made it 6 words
+        # although split_length is documented as the maximum number of units per split.
+        text = "Blue sky. Go. We walk into the woods."
+        splitter = DocumentSplitter(
+            split_by="word",
+            split_length=5,
+            split_overlap=1,
+            split_threshold=0,
+            language="en",
+            respect_sentence_boundary=True,
+        )
+        documents = splitter.run(documents=[Document(content=text)])["documents"]
+
+        assert [doc.content for doc in documents] == ["Blue sky. Go. ", "We walk into the woods."]
+        assert all(len(doc.content.split()) <= 5 for doc in documents)
+
     def test_run_split_by_word_respect_sentence_boundary_no_repeats(self) -> None:
         document_splitter = DocumentSplitter(
             split_by="word",

@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    ``DocumentSplitter`` no longer emits chunks longer than ``split_length`` when
+    ``respect_sentence_boundary`` is enabled together with ``split_overlap``. The overlap carried into
+    the next chunk is now measured against the sentence that follows it, so overlap is dropped when it
+    would push that chunk over the documented maximum. Sentences that already exceed ``split_length`` on
+    their own are still kept whole.

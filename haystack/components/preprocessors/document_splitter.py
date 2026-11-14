@@ -574,7 +574,10 @@ class DocumentSplitter:
 
                 # Get the number of sentences that overlap with the next chunk
                 num_sentences_to_keep = DocumentSplitter._number_of_sentences_to_keep(
-                    sentences=current_chunk, split_length=split_length, split_overlap=split_overlap
+                    sentences=current_chunk,
+                    split_length=split_length,
+                    split_overlap=split_overlap,
+                    next_sentence_word_count=next_sentence_word_count,
                 )
                 # Set up information for the new chunk
                 if num_sentences_to_keep > 0:
@@ -602,13 +605,18 @@ class DocumentSplitter:
         return text_splits, split_start_page_numbers, split_start_indices
 
     @staticmethod
-    def _number_of_sentences_to_keep(sentences: list[str], split_length: int, split_overlap: int) -> int:
+    def _number_of_sentences_to_keep(
+        sentences: list[str], split_length: int, split_overlap: int, next_sentence_word_count: int = 0
+    ) -> int:
         """
         Returns the number of sentences to keep in the next chunk based on the `split_overlap` and `split_length`.
 
         :param sentences: The list of sentences to split.
         :param split_length: The maximum number of words in each split.
         :param split_overlap: The number of overlapping words in each split.
+        :param next_sentence_word_count:
+            The number of words in the first sentence the next chunk will add after the overlapping ones. Overlap
+            that would push that chunk over `split_length` is dropped, so the documented maximum still holds.
         :returns: The number of sentences to keep in the next chunk.
         """
         # If the split_overlap is 0, we don't need to keep any sentences
@@ -622,6 +630,10 @@ class DocumentSplitter:
             num_words += len(sent.split())
             # If the number of words is larger than the split_length then don't add any more sentences
             if num_words > split_length:
+                break
+            # The next chunk is the kept sentences plus the sentence that follows them: if that would exceed
+            # split_length, overlap is dropped instead of emitting a chunk longer than the documented maximum.
+            if num_words + next_sentence_word_count > split_length:
                 break
             num_sentences_to_keep += 1
             if num_words >= split_overlap:
